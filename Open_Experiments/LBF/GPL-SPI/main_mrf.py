@@ -218,7 +218,7 @@ if __name__ == '__main__':
         obs = env.reset()
         agent.reset()
         if not args['constant_temp']:
-            # Implement log linear annealing
+            # Anneal temperature parameters at each episode.
             if not args['temp_annealing'] == "linear":
                 start_log = math.log(args['init_temp'])
                 end_log = math.log(args['final_temp'])
