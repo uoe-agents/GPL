@@ -50,4 +50,20 @@ Using the displayed logs, we can see the different metrics we reported in our wo
 
 ## Visualization
 
-The visualization codes are provided in the `Visualization` folder. For any result, you can compile the image by running the ```vis.py``` file.
+The visualization codes are provided in the `Visualization` folder. For results that we have provided in our work, you can compile these visualization by running the ```vis.py``` file in each of the folders inside the `Visualization` folder.
+
+## Joint Action value analysis
+
+For joint action value analysis, you must first gather the joint action value data. You can do this by running,
+```
+cd Action_Value_Analysis/Data_Collection
+./runner.sh
+```
+
+This will results in several numpy arrays being stored in ```Action_Value_Analysis/Data_Collection```. To do the analysis, you could then move these numpy arrays to the folder that contains the jupyter notebook for data analysis. You can do this by :
+```
+mv Action_Value_Analysis/Data_Analysis/*.npy Action_Value_Analysis/Data_Analysis
+
+```
+
+You can then run jupyter and execute the commands in the notebook. The visualizations of the metrics proposed in our work can be seen in the final two images produced in the notebook.
