@@ -24,49 +24,30 @@ cp async_vector_env.py <DIR>/gym/vector/async_vector_env.py
 
 ## Training
 
-The codes for our experiments are all provided in `*_Experiments` folders. Each of these folders corresponds to the training code we used to train GPL and the baselines in a specific environment.
-Before training the models, make sure to install the environments used in the experiments. For each environment, use the following instructions to install the environment:
+The codes for our open ad hoc teamwork experiments are provided in `Open_Experiments` folder. The `Open_Experiments` folder contains three folders, each containing the environment, GPL-Q, and GPL-SPI implementation for a specific environment used in our work.
+Before training the models in LBF and Wolfpack, make sure to install the environments used in the experiments using the following commands:
 ```setup
-cd env
+cd Open_Experiments/<Environment Name>/env
 pip install -e .
 ```
 
-As an exception, the FortAttack experiments requires additional steps before starting the training process. For any approach that is being trained, the codes of that approach must be moved to the ```Env``` folder. This can be done by the following command :
-```
-mv <APPROACH FOLDER NAME> Env
-```
-
-Then, to train the algorithm/baseline for that experiment, run this command:
+For all environments, run this command to train GPL-Q or GPL-SPI :
 
 ```train
+cd Open_Experiments/<Environment Name>/<Approach Name>
 ./runner.sh
 ```
 
-Full description of the hyperparameters and the architecture used in our work is provided in the appendix pdf file provided in the folder.
+Full description of the hyperparameters and the architecture used in our work is provided in the appendix of our work. 
 
-Aside from the component visualization experiment, periodic model checkpointing and evaluation has been included as part of the main script in the training implementation. We specifically run several episodes under the evaluation setup and log the resulting performance using tensorboard. However, since these logs can be quite big, we do not include it as part of the supplementary material. Instead, we include example csv result files that can be used to display the results presented in this work. 
+Aside from training a GPL-Q of GPL-SPI model, the shell script also periodically checkpoints the model and evaluates it in the training and evaluation environment. We specifically run several episodes under the evaluation setup and log the resulting performance using tensorboard. The resulting logs can be viewed using the following command : 
+
+```
+tensorboard --logdir=Open_Experiments/<Environment Name>/<Approach Name>/runs
+```
+
+Using the displayed logs, we can see the different metrics we reported in our work such as the average total returns per episode and the shooting accuracy of the learner. To compile the logs of the experiments into the plots we included in our work, you can download the logs as a csv and use the visualization codes in the `Visualization` folder.
 
 ## Visualization
 
-The visualization codes are provided in the `Visualization` folder. For any result, you can compile the image by running the ```script_plot.py``` file.
-
-
-With the GPL component visualization, the visualization code has already been provided as IPython notebook in `Experiments/component_visualization/Visualize.ipynb`. After executing `run.sh`, run the code from top to bottom to get a visualization of the different component models associated to GPL.
-
-## Value Analysis
-For joint action value analysis, you must first gather the joint action value data. You can do this by running,
-```
-mv Action_Value_Analysis/Data_Collection/* Open_Fortattack_Experiments/Env && cd Open_Fortattack_Experiments/Env
-./runner.sh
-```
-
-This will results in several numpy arrays being stored in ```Open_Fortattack_Experiments/Env```. To do the analysis, you could then move these numpy arrays to the folder that contains the jupyter notebook for data analysis. You can do this by :
-```
-mv Open_Fortattack_Experiments/Env/*.npy Action_Value_Analysis/Data_Analysis
-
-```
-
-You can then run jupyter and execute the commands in the notebook.
-
-## Pretrained policies
-Due to file size restrictions for supplementary materials, we only include GPL-Q's pretrained models for FortAttack. This can be found in the ```PretrainedParameters``` folder. This parameter could then be loaded and used to control an agent by using the ```load()``` function in GPL-Q's ```Agent.py``` file.
+The visualization codes are provided in the `Visualization` folder. For any result, you can compile the image by running the ```vis.py``` file.
