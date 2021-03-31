@@ -1,8 +1,4 @@
 import numpy as np
-# from multiagent.environment import MultiAgentEnv
-# import multiagent.scenarios as scenarios
-import gym
-#from gym_fortattack.fortattack import make_fortattack_env
 from gym_fortattack.open_fortattack import make_open_fortattack_env
 
 def normalize_obs(obs, mean, std):
