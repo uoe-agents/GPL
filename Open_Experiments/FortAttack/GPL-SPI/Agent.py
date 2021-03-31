@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import dgl
+import torch.distributions as dist
 
 def hard_copy(target_net, source_net):
     for target_param, param in zip(target_net.parameters(), source_net.parameters()):
@@ -15,7 +16,7 @@ def soft_copy(target_net, source_net, tau=0.001):
 
 class MRFAgent(object):
     def __init__(self, args=None, optimizer=None, device=None, writer=None,
-                 epsilon=1.0, added_u_dim=0, mode="train", gumbel_temp=None):
+                 epsilon=1.0, added_u_dim=0, temp=1.0, mode="train", gumbel_temp=None):
 
         self.args = args
         self.added_u_dim = added_u_dim
@@ -23,6 +24,7 @@ class MRFAgent(object):
         self.pair_comp = self.args['pair_comp']
         self.writer = writer
         self.num_updates = 0
+        self.temp = temp
 
         # Initialize neural network dimensions
         self.dim_lstm_out = 128
@@ -60,7 +62,13 @@ class MRFAgent(object):
         self.loss_module = nn.MSELoss()
         self.loss_module_f = nn.CrossEntropyLoss()
 
-    def step(self, obs, eval=False):
+    def clear_util_storage(self):
+        self.dqn_net.clear_util_storage()
+
+    def save_util_storage(self, filename):
+        self.dqn_net.save_util_storage(filename)
+
+    def step(self, obs, eval=False, hard_eval=False):
 
         p_graph, n_ob, u_ob, n_hiddens, n_hiddens_u = self.prep(
             obs, self.hiddens, self.hiddens_u
@@ -75,7 +83,12 @@ class MRFAgent(object):
         self.hiddens = hids
         self.hiddens_u = hids_u
 
-        acts = torch.argmax(out, dim=-1).tolist()
+        if hard_eval:
+            acts = torch.argmax(out, dim=-1).tolist()
+        else:
+            logits = out / self.temp
+            m = dist.Categorical(logits=logits)
+            acts = m.sample().view(-1).tolist()
 
         # Select outputs so likelihood only computed for nodes other than agent
         zero_indexes, offset = [0], 0
@@ -89,7 +102,9 @@ class MRFAgent(object):
         non_zero_indices = torch.Tensor([k for k in range(all_num_nodes) if not (k in zero_indexes)]).long()
 
         if not eval:
-            acts = [a if random.random() > self.epsilon else random.randint(0, 7) for a in acts]
+            logits = out / self.temp
+            m = dist.Categorical(logits=logits)
+            acts = m.sample().view(-1).tolist()
             self.logit_probs_theta.append(log_prob_theta[non_zero_indices,:])
 
         return acts
@@ -138,7 +153,9 @@ class MRFAgent(object):
 
             rew_t = torch.Tensor(rewards)[:, None].to(self.device)
             dones = torch.Tensor(done)[:, None].to(self.device)
-            targets = rew_t + self.args['gamma'] * (1 - dones) * torch.max(target_out, dim=-1, keepdim=True)[0]
+            cat_dis = dist.Categorical(logits=target_out / self.temp)
+            cat_probs = cat_dis.probs
+            targets = rew_t + self.args['gamma'] * (1 - dones) * torch.sum(target_out * cat_probs, dim=-1, keepdim=True)
             self.targ_vals.append(targets)
 
     def detach_hiddens(self):
@@ -167,7 +184,6 @@ class MRFAgent(object):
         graph_batch = dgl.batch(graph_list)
 
         # Parse inputs into node inputs
-
         num_nodes = graph_batch.batch_num_nodes
         n_ob = torch.Tensor(cur_existing_agents_data[:, 1:-1]).float()
         u_ob = torch.zeros((len(num_agents),0)).float()
@@ -220,14 +236,19 @@ class MRFAgent(object):
 
     def load_parameters(self, filename):
         self.dqn_net.load_state_dict(torch.load(filename))
-        self.target_dqn_net.state_dict(torch.load(filename + "_target_dqn"))
+        self.target_dqn_net.load_state_dict(torch.load(filename + "_target_dqn"))
+        self.optimizer.load_state_dict(torch.load(filename + "_optim"))
 
     def save_parameters(self, filename):
         torch.save(self.dqn_net.state_dict(), filename)
         torch.save(self.target_dqn_net.state_dict(), filename + "_target_dqn")
+        torch.save(self.optimizer.state_dict(), filename + "_optim")
 
     def set_epsilon(self, eps):
         self.epsilon = eps
+
+    def set_temp(self, temp):
+        self.temp = temp
 
     def update(self):
         self.optimizer.zero_grad()
